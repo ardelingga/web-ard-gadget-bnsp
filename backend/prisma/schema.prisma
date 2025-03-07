@@ -1,0 +1,129 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  name_business String?   @db.VarChar(255)
+  email         String?   @unique @db.VarChar(255)
+  phone_number  String?   @unique @db.VarChar(20)
+  address       String?
+  password      String?   @db.VarChar(255)
+  is_deleted    Boolean?  @default(false)
+  updated_at    DateTime? @default(now()) @db.Timestamp(6)
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  uuid          String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  products     Product[]
+  categories   Category[]
+  transactions transactions[]
+  cashflows    Cashflow[]
+
+  @@map("users")
+}
+
+model Category {
+  id         Int       @id @default(autoincrement())
+  name       String?   @db.VarChar(255)
+  is_deleted Boolean?  @default(false)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  created_by Int?
+  uuid       String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  created_by_user User?     @relation(fields: [created_by], references: [id])
+  products        Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          Int       @id @default(autoincrement())
+  code        String?   @db.VarChar(255)
+  name        String?   @db.VarChar(255)
+  price       Float?
+  profit      Float?
+  category_id Int?
+  stock       Int?
+  image_url   String?
+  is_deleted  Boolean?  @default(false)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  created_by  Int?
+  uuid        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  category            Category?             @relation(fields: [category_id], references: [id])
+  created_by_user     User?                 @relation(fields: [created_by], references: [id])
+  detail_transactions detail_transactions[]
+
+  @@map("products")
+}
+
+model transactions {
+  id               Int       @id @default(autoincrement())
+  code_transaction String?   @db.VarChar(255)
+  customer_name    String?   @db.VarChar(255)
+  grand_total      Int?
+  total_payment    Int?
+  money_changes    Int?
+  is_deleted       Boolean?  @default(false)
+  updated_at       DateTime? @default(now()) @db.Timestamp(6)
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  created_by       Int?
+
+  created_by_user     User?                 @relation(fields: [created_by], references: [id])
+  detail_transactions detail_transactions[]
+
+  @@map("transactions")
+}
+
+model detail_transactions {
+  id             Int       @id @default(autoincrement())
+  transaction_id Int?
+  product_id     Int?
+  quantity       Int?
+  total_price    Float?
+  total_profit   Float?
+  product_json   String?
+  is_deleted     Boolean?  @default(false)
+  updated_at     DateTime? @default(now()) @db.Timestamp(6)
+  created_at     DateTime? @default(now()) @db.Timestamp(6)
+
+  product     Product?      @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  transaction transactions? @relation(fields: [transaction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("detail_transactions")
+}
+
+enum CashflowType {
+  INCOME
+  EXPENSE
+}
+
+model Cashflow {
+  id          Int          @id @default(autoincrement()) // Primary Key
+  type        CashflowType // Enum: Jenis (income/expense)
+  value       Float // Nilai (jumlah uang)
+  description String?      @db.Text // Keterangan transaksi
+  date        DateTime     @default(now()) // Tanggal transaksi
+  is_deleted  Boolean      @default(false) // Soft delete
+  created_at  DateTime     @default(now()) @db.Timestamp(6) // Timestamp created
+  updated_at  DateTime     @default(now()) @db.Timestamp(6) // Timestamp updated
+  user_id     Int // Foreign Key ke User
+  uuid        String       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  created_by_user User? @relation(fields: [user_id], references: [id]) // Relasi ke User
+
+  @@map("cashflow")
+}
